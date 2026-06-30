@@ -1,10 +1,11 @@
 name: Deploy on GHCR update
 
 on:
-  registry_package:
-    types:
-      - published
-      - updated
+  workflow_dispatch:
+  # registry_package:
+  #   types:
+  #     - published
+  #     - updated
 jobs:
   deploy:
     runs-on: ubuntu-latest
