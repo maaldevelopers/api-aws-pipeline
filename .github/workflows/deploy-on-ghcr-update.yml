@@ -2,47 +2,58 @@ name: Deploy on GHCR update
 
 on:
   workflow_dispatch:
+    inputs:
+      api_name:
+        description: "API to deploy"
+        required: true
+        type: choice
+        options:
+          - customer-api
+          - core-api
   # registry_package:
   #   types:
   #     - published
   #     - updated
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    if: |
-      github.event.registry_package.package_type == 'container' &&
-      (
-        (
-          github.event.registry_package.name == 'customer-api' ||
-          github.event.registry_package.name == 'core-api'
-        ) &&
-        github.event.registry_package.package_version.name == 'latest'
-      )
+    # if: |
+    #   github.event.registry_package.package_type == 'container' &&
+    #   (
+    #     (
+    #       github.event.registry_package.name == 'customer-api' ||
+    #       github.event.registry_package.name == 'core-api'
+    #     ) &&
+    #     github.event.registry_package.package_version.name == 'latest'
+    #   )
 
     permissions:
       id-token: write
       contents: read
 
     steps:
-      - name: Print the package name and version
+      - name: Print the package name
         run: |
-          echo "Package: ${{ github.event.registry_package.name }}"
-          echo "Version: ${{ github.event.registry_package.tag }}"
+          echo "Package: ${{ inputs.api_name }}"
+          # echo "Package: ${{ github.event.registry_package.name }}"
+          # echo "Version: ${{ github.event.registry_package.tag }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ap-south-1
-          role-to-assume: arn:aws:iam::<AWS_ACCOUNT_ID>:role/github-actions-ssm-deploy-role
+          role-to-assume: arn:aws:iam::403959680151:role/github-actions-ssm-deploy-role
 
       - name: Build image name
         id: image
         run: |
-          PACKAGE_NAME="${{ github.event.registry_package.name }}"
-          TAG="${{ github.event.registry_package.package_version.name }}"
+          PACKAGE_NAME="${{ inputs.api_name }}"
+          # PACKAGE_NAME="${{ github.event.registry_package.name }}"
+          # TAG="${{ github.event.registry_package.package_version.name }}"
 
-          IMAGE="ghcr.io/${{ github.repository_owner }}/${PACKAGE_NAME}:${TAG}"
+          IMAGE="ghcr.io/${{ github.repository_owner }}/${PACKAGE_NAME}:latest"
 
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "Deploying image: $IMAGE"
