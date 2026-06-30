@@ -58,11 +58,25 @@ jobs:
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "Deploying image: $IMAGE"
 
+      - name: Resolve EC2 instance ID from tag
+        id: ec2
+        run: |
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --region ap-south-1 \
+            --filters \
+              "Name=tag:Name,Values=maal-prod-${{ inputs.api_name }}" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text)
+
+          echo "Instance ID: $INSTANCE_ID"
+          echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"
+
       - name: Run deploy.sh on EC2 using SSM
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --region ap-south-1 \
-            --targets "Key=tag:Role,Values=app-server" \
+            --targets "Key=tag:Name,Values=maal-prod-${{ inputs.api_name }}" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy GHCR image ${{ steps.image.outputs.image }}" \
             --parameters commands='[
@@ -76,4 +90,4 @@ jobs:
           aws ssm wait command-executed \
             --region ap-south-1 \
             --command-id "$COMMAND_ID" \
-            --instance-id "<EC2_INSTANCE_ID>"
+            --instance-id "${{ steps.ec2.outputs.instance_id }}"
